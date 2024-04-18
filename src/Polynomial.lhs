@@ -4,31 +4,31 @@
 > import Data.Ratio
 > import Field
 > import UltrametricCalculator
+> import BlockDisplay
 >
 > data Polynomial a = Polynomial [a] deriving (Eq)
 >
-> display_polynomial :: (Show a, Field a) => Polynomial a -> String
-> display_polynomial (Polynomial xs)
->  | length with_powers == 0 = "0"
->  | otherwise = cleaned
->   where powers = [ 0 .. ]
->         with_powers = [with_power_string (coefficient, power) | (coefficient, power) <- zip (reverse xs) powers,  not (isZero coefficient)]
->         --with_power_string :: (a, Integer) -> String
->         with_power_string (coefficient, 0) = show (coefficient)
->         with_power_string (coefficient, 1) = show (coefficient) ++ "x"
->         with_power_string (coefficient, power) = (show coefficient) ++ "x^" ++ (show power)
->         joined = concat (intersperse " + " with_powers)
->         plus_minus_cleanup :: String -> String
->         plus_minus_cleanup "" = ""
->         plus_minus_cleanup (xs)
->            | isPrefixOf "+ -" xs = "- " ++ (plus_minus_cleanup (drop 3 xs))
->            | otherwise = (head xs) : (plus_minus_cleanup (tail xs))
->         cleaned = plus_minus_cleanup joined
-
+> instance (BlockDisplay a, Field a) => BlockDisplay (Polynomial a) where
+>  blockDisplay (Polynomial xs)
+>   | length with_powers == 0 = OrdinaryText "0"
+>   | otherwise = HBlock (HorizontalBlock NoSeparator joined)
+>    where powers = [ 0 .. ]
+>          with_powers = [ with_power_string (coefficient, power, rendersAsNegative coefficient) | (coefficient, power) <- zip (reverse xs) powers,
+>                            not (isZero coefficient)]
+>          --with_power_string :: (a, Integer, Bool) -> [BlockElement]
+>          with_power_string (coefficient, 0, p) = ([blockDisplay (coefficient)], p)
+>          with_power_string (coefficient, 1, p) = ([blockDisplay (coefficient)] ++ [OrdinaryText " x"], p)
+>          with_power_string (coefficient, power, p) = (([blockDisplay coefficient]) ++ [OrdinaryText " x", Superscript (show power)],p)
+>          joiner [] = []
+>          joiner [(x,_)] = x
+>          joiner ((x1,p1):((x2,p2):xs))
+>           | p2 = x1 ++ [OrdinaryText " "] ++ (joiner ((x2,p2):xs))
+>           | otherwise = x1 ++ [OrdinaryText " + "] ++  (joiner ((x2,p2):xs))
+>          joined = joiner (reverse with_powers)
 >
 > 
-> instance (Show a,Field a) => Show (Polynomial a) where
->   show x = display_polynomial x
+> instance (BlockDisplay a,Field a) => Show (Polynomial a) where
+>   show x = render (blockDisplay x)
 
 > polyDegreeInt :: Field a => Polynomial a -> Int
 > polyDegreeInt (Polynomial xs) = length (dropWhile isZero xs)

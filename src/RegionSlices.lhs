@@ -1,10 +1,11 @@
 > module RegionSlices where
 > import UltrametricCalculator
+> import BlockDisplay
 > 
 > data RegionId = Anonymous | RegionId Int deriving (Eq, Ord)
 > instance Show RegionId where
->   show Anonymous = "(region without id)"
->   show (RegionId n) = "region #" ++ (show n)
+>   show Anonymous = "(Region without id)"
+>   show (RegionId n) = "Region #" ++ (show n)
 > data RegionIdPool = RegionIdPool { next_unused :: Int }
 > newRegionIdPool :: RegionIdPool
 > newRegionIdPool = RegionIdPool {next_unused = 1}
@@ -25,7 +26,37 @@
 >    -- - the subregions are equidistant from each other
 >  -- 5, 30, 130, 55
 >
->  } | NullRegion deriving Show
+>  } | NullRegion
+>
+> instance (BlockDisplay a, BlockDisplay b) => BlockDisplay (UltrametricRegion a b) where
+>  blockDisplay (Point {point_id=pid, point=p, payloads=ps}) =
+>    Bordered (
+>      HBlock (HorizontalBlock NoSeparator [
+>           OrdinaryText (show (pid)),
+>           OrdinaryText " Point = ",
+>           blockDisplay p,
+>           OrdinaryText " Payload = [",
+>           HBlock (HorizontalBlock (Delimiter "; ") [blockDisplay px | px <- ps]),
+>           OrdinaryText "]"
+>           ]))
+>  blockDisplay NullRegion = Bordered (OrdinaryText "Null region")
+>  blockDisplay (Circle {circle_id=cid, centre=c, radius=r, subregions=ss}) =
+>     Bordered (
+>       VBlock (VerticalBlock { internal_blocks_alignment=LeftAligned, block_alignment=Top,
+>         blocks=[(HBlock (HorizontalBlock NoSeparator [
+>                    OrdinaryText (show cid),
+>                    OrdinaryText " Centre = ",
+>                    (blockDisplay c),
+>                    OrdinaryText "; Radius = ",
+>                    OrdinaryText (show r)
+>                   ])),
+>                 (HBlock (HorizontalBlock NoSeparator [
+>                    OrdinaryText "Subregions: ",
+>                    VBlock (VerticalBlock { internal_blocks_alignment=LeftAligned, block_alignment=Top,
+>                          blocks=[Bordered (blockDisplay s) | s <- ss] } ) ] ) ) ]  } ) )
+>
+> instance (BlockDisplay a, BlockDisplay b) => Show (UltrametricRegion a b) where
+>   show ur = render (blockDisplay ur)
 >
 > getRegionId :: UltrametricRegion a b -> RegionId
 > getRegionId NullRegion = Anonymous

@@ -24,6 +24,10 @@
 >   invert x = identityElement `dividedBy` x
 >   dividedBy :: a -> a -> a
 >   dividedBy x y = x `times` (invert y)
+>   -- rendersAsNegative... when rendered, would it have a minus
+>   -- sign? i.e. do I need to put a plus sign before it?
+>   rendersAsNegative :: a -> Bool
+>   rendersAsNegative _ = False
 >
 > instance (Integral a) => Field (Ratio a) where
 >   zeroElement = 0
@@ -35,5 +39,5 @@
 >   minus x y = x - y
 >   invert x = (1%1) / x
 >   dividedBy x y = x / y
->
+>   rendersAsNegative x = ((numerator x) < 0) && (denominator x == 1)
 > 

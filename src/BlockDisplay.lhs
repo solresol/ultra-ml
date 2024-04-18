@@ -6,7 +6,7 @@
 > data OutputLine = Ascender Int | Base | Descender Int deriving (Eq, Ord, Show)
 > data HorizontalAlignment = LeftAligned | CentredHorizontally deriving (Show)
 > data VerticalAlignment = Top | CentredVertically | Bottom deriving (Show)
-> data HBlockSeparator = NoSeparator | NSpaces Int | Delimeter String deriving (Show)
+> data HBlockSeparator = NoSeparator | NSpaces Int | Delimiter String deriving (Show)
 > data HorizontalBlock = HorizontalBlock HBlockSeparator [BlockElement] deriving (Show)
 > data VerticalBlock = VerticalBlock {
 >                         internal_blocks_alignment :: HorizontalAlignment,
@@ -24,7 +24,7 @@
 > hblockSeparatorString :: HBlockSeparator -> String
 > hblockSeparatorString NoSeparator = ""
 > hblockSeparatorString (NSpaces n) = nSpaces n
-> hblockSeparatorString (Delimeter d) = d
+> hblockSeparatorString (Delimiter d) = d
 >
 > verticalBlockHeight :: VerticalBlock -> Int
 > verticalBlockHeight (VerticalBlock {blocks=bs}) =
@@ -69,7 +69,7 @@
 > blockWidth (VBlock vb) = verticalBlockWidth vb
 > blockWidth (HBlock (HorizontalBlock NoSeparator bes)) = sum [blockWidth b | b <- bes]
 > blockWidth (HBlock (HorizontalBlock (NSpaces n) bes)) = (sum [blockWidth b | b <- bes]) + (n * ((length bes) - 1))
-> blockWidth (HBlock (HorizontalBlock (Delimeter d) bes)) = (sum [blockWidth b | b <- bes]) + ((length d) * ((length bes) - 1))
+> blockWidth (HBlock (HorizontalBlock (Delimiter d) bes)) = (sum [blockWidth b | b <- bes]) + ((length d) * ((length bes) - 1))
 > 
 >
 > numberOfAscenderLines :: BlockElement -> Int
