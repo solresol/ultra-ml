@@ -1,10 +1,16 @@
 > module RegionSlices where
 > import UltrametricCalculator
+> 
+> data RegionId = Anonymous | RegionId Int deriving (Eq, Ord)
+> instance Show RegionId where
+>   show Anonymous = "(region without id)"
+>   show (RegionId n) = "region #" ++ (show n)
+> data RegionIdPool = RegionIdPool { next_unused :: Int }
+> newRegionIdPool :: RegionIdPool
+> newRegionIdPool = RegionIdPool {next_unused = 1}
+> allocateRegionId :: RegionIdPool -> (RegionId, RegionIdPool)
+> allocateRegionId (RegionIdPool {next_unused=n}) = ((RegionId n), RegionIdPool {next_unused=(n+1) })
 >
-> type RegionId = Int
-> -- there is only one NullRegion
-> nullRegionId :: RegionId
-> nullRegionId = -1
 > data UltrametricRegion a b = Point {
 >    point_id :: RegionId,
 >    point :: a,
@@ -22,9 +28,14 @@
 >  } | NullRegion deriving Show
 >
 > getRegionId :: UltrametricRegion a b -> RegionId
-> getRegionId NullRegion = nullRegionId
+> getRegionId NullRegion = Anonymous
 > getRegionId (Point {point_id=p}) = p
 > getRegionId (Circle {circle_id=i}) = i
+>
+> isAnonymousRegion :: UltrametricRegion a b -> Bool
+> isAnonymousRegion u = case (getRegionId u) of
+>     Anonymous -> True
+>     _ -> False
 > 
 > isNullRegion NullRegion = True
 > isNullRegion _ = False
@@ -150,10 +161,7 @@ This really shouldn't happen...
 >      where (near, far) = partitionByClosest f x (subregions region)
 >
 > makePoint :: a -> b -> UltrametricRegion a b
-> makePoint x y = Point { point=x, payloads=[y] }
->
-> treeify :: (UltrametricCalculator a) -> [(a,b)] -> UltrametricRegion a b
-> treeify uc d = treeify' uc d NullRegion
+> makePoint x y = Point { point=x, payloads=[y], point_id=Anonymous }
 >
 > treeify' :: (UltrametricCalculator a) -> [(a,b)] -> UltrametricRegion a b -> UltrametricRegion a b
 > treeify' _ [] current_tree = current_tree
@@ -163,14 +171,42 @@ This really shouldn't happen...
 >
 > treeInsert :: (a -> a -> Double) -> a -> b -> UltrametricRegion a b -> UltrametricRegion a b
 > treeInsert _ position payload NullRegion = makePoint position payload
-> treeInsert uc position payload (Point {point=pt, payloads=pl})
->   | uc position pt == 0.0 = Point {point=pt, payloads=payload:pl}
->   | otherwise = Circle {centre=pt, radius=uc position pt,
->                         subregions=[Point {point=pt, payloads=pl},
+> treeInsert uc position payload (Point {point=pt, payloads=pl, point_id=Anonymous })
+>   | uc position pt == 0.0 = Point {point=pt, payloads=payload:pl, point_id=Anonymous}
+>   | otherwise = Circle {centre=pt, radius=uc position pt, circle_id=Anonymous,
+>                         subregions=[Point {point=pt, payloads=pl, point_id=Anonymous},
 >                                     makePoint position payload]}
 > treeInsert uc position payload (region@(Circle {centre=c, radius=r, subregions=srs}))
 >   | uc position c <= r = sanitychecked uc (addToRegion uc position payload region)
 >   | otherwise = Circle { centre=position,
 >                          radius=uc position c,
->                          subregions=[region, makePoint position payload] }
+>                          subregions=[region, makePoint position payload],
+>                          circle_id = Anonymous
+> }
+>
+> assignRegionIDsToList :: RegionIdPool -> [UltrametricRegion a b] -> ([UltrametricRegion a b],RegionIdPool)
+> assignRegionIDsToList rids [] = ([],rids)
+> assignRegionIDsToList rids (u:us) = (u':us', rids'')
+>   where (u', rids') = assignRegionIDs rids u
+>         (us', rids'') = assignRegionIDsToList rids' us 
+>
+> assignRegionIDs :: RegionIdPool -> UltrametricRegion a b -> (UltrametricRegion a b,RegionIdPool)
+> assignRegionIDs pool (p@(Point {}))
+>   | isAnonymousRegion p = ((p { point_id = rid }), pool')
+>   | otherwise = (p, pool)
+>       where (rid, pool') = allocateRegionId pool
+> assignRegionIDs pool (c@(Circle {subregions=s}))
+>   | isAnonymousRegion c = ((c { circle_id = rid, subregions=s' }), pool'')
+>   | otherwise = (c { subregions=s'}, pool')
+>       where (rid, pool') = allocateRegionId pool
+>             (s', pool'') = assignRegionIDsToList pool' s
+>             -- if the region has an ID, we allocate one and then forget it
+> assignRegionIDs pool (NullRegion) = (NullRegion, pool)
+ 
+And this is what we've been building up to...
+
+> treeify :: (UltrametricCalculator a) -> [(a,b)] -> UltrametricRegion a b
+> treeify uc d = labelled
+>   where unlabelled = treeify' uc d NullRegion
+>         (labelled, pool') = assignRegionIDs (newRegionIdPool) unlabelled
 >
