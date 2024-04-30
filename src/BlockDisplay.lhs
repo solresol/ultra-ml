@@ -169,3 +169,6 @@
 >   blockDisplay x = OrdinaryText (show x)
 > instance BlockDisplay Integer where
 >   blockDisplay x = OrdinaryText (show x)
+>
+>
+> 

@@ -241,3 +241,52 @@ And this is what we've been building up to...
 >   where unlabelled = treeify' uc d NullRegion
 >         (labelled, pool') = assignRegionIDs (newRegionIdPool) unlabelled
 >
+
+> extractRegions :: UltrametricRegion a b -> [RegionId]
+> extractRegions (Point {point_id=r}) = [r]
+> extractRegions (Circle {circle_id=r, subregions=ss}) =
+>     r : (concat ([extractRegions s | s <- ss]))
+> extractRegions NullRegion = []
+>    -- the only thing we want to do when we extractRegions is to keep track
+>    -- of them for later, so the Anonymous region ID is useless
+>    -- I would feel much happier if Id'd and Anonymous Regions were differnt types
+>
+> recursivePayloadExtract :: UltrametricRegion a b -> [b]
+> recursivePayloadExtract (Point {payloads=ps}) = ps
+> recursivePayloadExtract (Circle {subregions=ss}) =
+>     concat ([recursivePayloadExtract s | s <- ss])
+> recursivePayloadExtract NullRegion = []
+>
+> data PayloadPartition b = PayloadPartition { in_region :: [b], out_of_region :: [b] }
+>    deriving (Show)
+> instance (BlockDisplay b) => BlockDisplay (PayloadPartition b)
+>   where blockDisplay (PayloadPartition { in_region=ins, out_of_region=outs }) =
+>            VBlock (VerticalBlock {
+>                       internal_blocks_alignment=LeftAligned,
+>                       block_alignment=Top,
+>                       blocks=[in_block, out_block] })
+>            where in_block = (HBlock (
+>                               HorizontalBlock (NSpaces 1) [OrdinaryText "IN  = ", Bordered (blockDisplayList (Delimiter " | ") ins)]))
+>                  out_block =  (HBlock (
+>                               HorizontalBlock (NSpaces 1) [OrdinaryText "OUT = ", Bordered (blockDisplayList (Delimiter " | ") outs)]))
+> 
+> emptyPayloadPartition = PayloadPartition { in_region=[], out_of_region=[] }
+>
+> mergePayloadPartitionPair :: PayloadPartition a -> PayloadPartition a-> PayloadPartition a
+> mergePayloadPartitionPair (PayloadPartition {in_region=in1, out_of_region=out1}) (PayloadPartition {in_region=in2, out_of_region=out2}) =
+>    PayloadPartition {in_region=in1 ++ in2, out_of_region=out1 ++ out2 }
+>
+> 
+> mergePayloadPartitions :: [PayloadPartition a] -> PayloadPartition a
+> mergePayloadPartitions ps = foldl mergePayloadPartitionPair emptyPayloadPartition ps
+> 
+> payloadPartitionByRegionId :: RegionId -> UltrametricRegion a b -> PayloadPartition b
+> payloadPartitionByRegionId region_id (Point {point_id=r, payloads=ps})
+>   | region_id == r = PayloadPartition { in_region=ps, out_of_region = [] }
+>   | otherwise = PayloadPartition { in_region=[], out_of_region = ps }
+> payloadPartitionByRegionId region_id (c@(Circle {circle_id=c_id, subregions=ss}))
+>   | region_id == c_id = PayloadPartition { in_region=recursivePayloadExtract c,
+>                                         out_of_region = [] }
+>   | otherwise = mergePayloadPartitions [payloadPartitionByRegionId region_id s | s <- ss]
+> payloadPartitionByRegionId region_id NullRegion = emptyPayloadPartition
+>       
