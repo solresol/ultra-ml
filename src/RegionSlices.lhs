@@ -1,7 +1,8 @@
 > module RegionSlices where
 > import UltrametricCalculator
 > import BlockDisplay
-> 
+> import Data.Maybe
+>
 > data RegionId = Anonymous | RegionId Int deriving (Eq, Ord)
 > instance Show RegionId where
 >   show Anonymous = "(Region without id)"
@@ -67,7 +68,7 @@
 > isAnonymousRegion u = case (getRegionId u) of
 >     Anonymous -> True
 >     _ -> False
-> 
+>
 > isNullRegion NullRegion = True
 > isNullRegion _ = False
 >
@@ -79,13 +80,13 @@ data Separation = Undefined | Equidistant Double | Multidistance [Double]
  separation _ _ NullRegion = Undefined
  separation f (Point {point=p}) (Point {point=q}) = Equidistant (f p q)
  separation f (Point {point=p}) (Circle {centre=c}) =  Equidistant (f p c)
- separation f (Circle {centre=d}) (Circle {centre=c}) = Equidistant (f d c)  
+ separation f (Circle {centre=d}) (Circle {centre=c}) = Equidistant (f d c)
  separation f  (Circle {centre=c}) (Point {point=p}) = Equidistant (f c p)
  separationCheck :: (a -> a -> Double) -> [UltrametricRegion a b] -> Separation
  separationCheck f [] = Undefined
- separationCheck f [_] = Undefined 
+ separationCheck f [_] = Undefined
  separationCheck f [u1,u2] = separation u1 u2
- 
+
 
 sanitcheck' needs to check that all the subregions are equidistant
 from each other
@@ -105,7 +106,7 @@ from each other
 > sanitychecked f ur
 >   | sanitycheck' f ur = ur
 >   | otherwise = error "Sanity check failed"
->        
+>
 >
 > data Containment = Inside | OutsideEquidistant Double |
 >                    OutsideMinMaxRange Double Double |
@@ -125,8 +126,8 @@ from each other
 > isInside :: Containment -> Bool
 > isInside Inside = True
 > isInside _ = False
-> 
-> 
+>
+>
 > containment :: (a -> a -> Double) -> a -> UltrametricRegion a b -> Containment
 > containment f x (Point {point=p})
 >   | f x p == 0.0 = Inside
@@ -155,7 +156,7 @@ from each other
 > containments :: (a -> a -> Double) -> a -> [UltrametricRegion a b] -> Containment
 > containments f x regions = containment_reduction ([containment f x r | r <- regions])
 >
-> 
+>
 >
 > outsideAll :: (a -> a -> Double) -> a -> [UltrametricRegion a b] -> Bool
 > outsideAll f x rs = isOutside (containments f x rs)
@@ -177,7 +178,7 @@ This really shouldn't happen...
 >         | equidistantLength (containment f x z) < d = partitionByClosest' zs d (z,k:ks)
 >         | otherwise = partitionByClosest' zs d (k,z:ks)
 >        distance = equidistantLength (containment f x ur)
-> 
+>
 >
 > addToRegion :: (a -> a -> Double) -> a -> b -> UltrametricRegion a b -> UltrametricRegion a b
 > addToRegion _ x y NullRegion = makePoint x y
@@ -219,7 +220,7 @@ This really shouldn't happen...
 > assignRegionIDsToList rids [] = ([],rids)
 > assignRegionIDsToList rids (u:us) = (u':us', rids'')
 >   where (u', rids') = assignRegionIDs rids u
->         (us', rids'') = assignRegionIDsToList rids' us 
+>         (us', rids'') = assignRegionIDsToList rids' us
 >
 > assignRegionIDs :: RegionIdPool -> UltrametricRegion a b -> (UltrametricRegion a b,RegionIdPool)
 > assignRegionIDs pool (p@(Point {}))
@@ -233,7 +234,7 @@ This really shouldn't happen...
 >             (s', pool'') = assignRegionIDsToList pool' s
 >             -- if the region has an ID, we allocate one and then forget it
 > assignRegionIDs pool (NullRegion) = (NullRegion, pool)
- 
+
 And this is what we've been building up to...
 
 > treeify :: (UltrametricCalculator a) -> [(a,b)] -> UltrametricRegion a b
@@ -269,17 +270,22 @@ And this is what we've been building up to...
 >                               HorizontalBlock (NSpaces 1) [OrdinaryText "IN  = ", Bordered (blockDisplayList (Delimiter " | ") ins)]))
 >                  out_block =  (HBlock (
 >                               HorizontalBlock (NSpaces 1) [OrdinaryText "OUT = ", Bordered (blockDisplayList (Delimiter " | ") outs)]))
-> 
+>
 > emptyPayloadPartition = PayloadPartition { in_region=[], out_of_region=[] }
+> degeneratePayloadPartition :: PayloadPartition a -> Bool
+> degeneratePayloadPartition (PayloadPartition { in_region=ins, out_of_region=outs})
+>  | length ins == 0 = True
+>  | length outs == 0 = True
+>  | otherwise = False
 >
 > mergePayloadPartitionPair :: PayloadPartition a -> PayloadPartition a-> PayloadPartition a
 > mergePayloadPartitionPair (PayloadPartition {in_region=in1, out_of_region=out1}) (PayloadPartition {in_region=in2, out_of_region=out2}) =
 >    PayloadPartition {in_region=in1 ++ in2, out_of_region=out1 ++ out2 }
 >
-> 
+>
 > mergePayloadPartitions :: [PayloadPartition a] -> PayloadPartition a
 > mergePayloadPartitions ps = foldl mergePayloadPartitionPair emptyPayloadPartition ps
-> 
+>
 > payloadPartitionByRegionId :: RegionId -> UltrametricRegion a b -> PayloadPartition b
 > payloadPartitionByRegionId region_id (Point {point_id=r, payloads=ps})
 >   | region_id == r = PayloadPartition { in_region=ps, out_of_region = [] }
@@ -289,4 +295,55 @@ And this is what we've been building up to...
 >                                         out_of_region = [] }
 >   | otherwise = mergePayloadPartitions [payloadPartitionByRegionId region_id s | s <- ss]
 > payloadPartitionByRegionId region_id NullRegion = emptyPayloadPartition
->       
+>
+> payloadPartitions :: UltrametricRegion a b -> [(RegionId, PayloadPartition b)]
+> payloadPartitions ur = [(r, payloadPartitionByRegionId r ur) | r <- extractRegions ur]
+>
+> type PartitionScoringFunction a = (PayloadPartition a) -> Double
+>
+> scorePartitions :: UltrametricRegion a b -> PartitionScoringFunction b -> [(RegionId, Double)]
+> scorePartitions ur f = [ (r, f pp) | (r,pp) <- payloadPartitions ur , not (degeneratePayloadPartition pp)]
+>
+> data Minimise = SumOfDistances | MaxOfDistances
+>
+> bruteForceFinder :: Minimise -> UltrametricCalculator a -> [a] -> Double
+> bruteForceFinder _ _ [] = error "Asked to find a minimiser in an empty list"
+> bruteForceFinder minimise (UltrametricCalculator f) bucket = lowest_score
+>   where scores_from_each_candidate = bff' bucket
+>         lowest_score = minimum [snd t | t <- scores_from_each_candidate]
+>         bff' [] = []
+>         bff' (x:xs) = (x, reduced_scores) : (bff' xs)
+>           where this_one_scores = [f x y | y <- bucket]
+>                 reduced_scores = mcalc this_one_scores
+>                 mcalc = case minimise of
+>                            SumOfDistances -> sum
+>                            MaxOfDistances -> maximum
+>
+> partitionScorer :: Minimise -> UltrametricCalculator a -> PayloadPartition a -> Double
+> partitionScorer minimis uf (PayloadPartition {in_region=ins, out_of_region=outs}) = in_score + out_score
+>    where in_score = bruteForceFinder minimis uf ins
+>          out_score = bruteForceFinder minimis uf outs
+>
+> optimalPartition :: UltrametricRegion a b -> PartitionScoringFunction b -> (RegionId, Double)
+> optimalPartition ur f = first_with_lowest_score
+>     where scores = scorePartitions ur f
+>           lowest_score = minimum [d | (a,d) <- scores ]
+>           first_with_lowest_score = head [(a,d) | (a,d) <- scores, d == lowest_score]
+>
+> regionIdToRegionFunc :: Eq a => UltrametricCalculator a -> UltrametricRegion a b -> RegionId -> Maybe (a -> Bool)
+> regionIdToRegionFunc _ (Point {point_id=p_id, point=p}) r
+>   | p_id == r = Just (\x -> x == p)
+>   | otherwise = Nothing
+> regionIdToRegionFunc (UltrametricCalculator umc) (Circle {circle_id=c_id, centre=c, radius=rad, subregions=ss}) r
+>   | c_id == r = Just (\x -> umc x c <= rad)
+>   | isJust subregion_func = subregion_func
+>   | otherwise = Nothing
+>      where subregion_func = findRegionFuncByRegionId (UltrametricCalculator umc) ss r
+>
+> findRegionFuncByRegionId :: Eq a => UltrametricCalculator a -> [UltrametricRegion a b] -> RegionId -> Maybe (a -> Bool)
+> findRegionFuncByRegionId _ [] _ = Nothing
+> findRegionFuncByRegionId umc (region:regions) region_id
+>   | isJust regionfunc = regionfunc
+>   | otherwise = findRegionFuncByRegionId umc regions region_id
+>        where regionfunc = regionIdToRegionFunc umc region region_id
+>
