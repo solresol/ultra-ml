@@ -12,4 +12,9 @@
 >         ]
 > driver_regions = extractRegions driver
 > driver_all_payloads = recursivePayloadExtract driver
-
+>
+> bruteForceTest = bruteForceFinder SumOfDistances (Polynomial.polyOverRationalsDegree) [(Polynomial [1%1,1%1]), (Polynomial [2%1,0%1]), (Polynomial [2%1,1%1]), (Polynomial [2%1,2%1,2%1])]
+>
+> partition_scoring_test = scorePartitions driver (partitionScorer SumOfDistances Polynomial.polyOverRationalsDegree)
+>
+> optimal_partition_test = optimalPartition driver  (partitionScorer SumOfDistances Polynomial.polyOverRationalsDegree)
