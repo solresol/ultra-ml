@@ -1,16 +1,25 @@
 > module Datasets where
 > import Data.List
+> -- A is the type of the row names. Often Int, sometimes String
 > -- B is the type of the column names. Often String, otherwise something enumerable
 > -- C is the type of a feature. Really, I should make this abstract as well, but
 > --   how often do you want to have heterogenous feature types. (Answer: really often, actually)
 > -- D is the type of the target.
 >
-> data Dataset b c d = Dataset {
+> data Dataset a b c d = Dataset {
+>   rowNames :: [a],
 >   featureNames :: [b],
->   extractFeature :: b -> [c],
+>   extractFeature :: b -> [c], -- I think this is a bad idea. We should use a hashtable.
 >   extractTarget :: [d]
 > }
-> extractFeatureAndTarget :: Dataset b c d -> b -> [(c,d)]
+> instance (Show a, Show b, Show c, Show d) => Show (Dataset a b c d) where
+>   show (Dataset {rowNames = r, featureNames = fnames, extractFeature=ef, extractTarget=et}) =
+>     (intercalate "\n" [
+>         (show fname) ++ ": " ++ (intercalate ", " [(show name) ++ "=" ++ (show fval) | (name,fval) <- zip r (ef fname)]) |
+>          fname <- fnames]) ++ "\nTarget: " ++ 
+>     (intercalate ", " [(show name) ++ "=" ++ (show t) | (name, t) <- zip r et])
+> 
+> extractFeatureAndTarget :: Dataset a b c d -> b -> [(c,d)]
 > extractFeatureAndTarget dataset idx = zip ((extractFeature dataset) idx) ((extractTarget dataset))
 >
 > selectListElements :: [a] -> [Bool] -> [a]
@@ -24,18 +33,18 @@
 > invertedDeciderList :: [Bool] -> [Bool]
 > invertedDeciderList bs = [not b | b <- bs]
 >
-> selectRowsDataset :: Dataset b c d -> [Bool] -> Dataset b c d
-> selectRowsDataset (Dataset {featureNames = f, extractFeature = ef, extractTarget = et}) bs =
->    Dataset {featureNames = f, extractFeature = ef', extractTarget = et'}
+> selectRowsDataset :: Dataset a b c d -> [Bool] -> Dataset a b c d
+> selectRowsDataset (Dataset {featureNames = f, extractFeature = ef, extractTarget = et, rowNames = rn}) bs =
+>    Dataset {featureNames = f, extractFeature = ef', extractTarget = et', rowNames = rn'}
 >  where
 >    ef' feature = selectListElements (ef feature) bs
 >    et' = selectListElements et bs
+>    rn' = selectListElements rn bs
 >
-> splitBasedOnRowSelection :: Dataset b c d -> b -> (c -> Bool) -> (Dataset b c d, Dataset b c d)
+> splitBasedOnRowSelection :: Dataset a b c d -> b -> (c -> Bool) -> (Dataset a b c d, Dataset a b c d)
 > splitBasedOnRowSelection dataset column filterfunc =
 >  (selectRowsDataset dataset selection, selectRowsDataset dataset unselection)
 >   where feature = (extractFeature dataset) column
 >         selection = [filterfunc f | f <- feature]
 >         unselection = invertedDeciderList selection
->
 >
