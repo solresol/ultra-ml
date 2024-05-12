@@ -16,7 +16,8 @@
 >                      | Incense_tree_n_01 deriving (Eq, Ord, Enum, Show)
 > zp = padic_int 409
 > zplist = map zp
-> zorgette :: Dataset ZorgetteRequest ZorgetteLoot Padic Padic
+zorgette :: Dataset ZorgetteRequest ZorgetteLoot Padic Padic
+zorgette = -- Existing function definition
 > zorgette = Dataset {
 >   rowNames = [Chestnut_n_02  .. Incense_tree_n_01 ],
 >   featureNames = [Robot1Loot, Robot2Loot],
