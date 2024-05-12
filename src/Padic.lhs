@@ -16,6 +16,7 @@
 >          | n `mod` prime == 0 = padic_expansion' (n `div` prime) (k+1)
 >          | otherwise = (PadicExpansionTerm prime (n `mod` prime) k) : padic_expansion' (n `div` prime) (k+1)
 > expansion_term_to_string :: PadicExpansionTerm -> Maybe String
+> expansion_term_to_string :: PadicExpansionTerm -> Maybe String
 > expansion_term_to_string (PadicExpansionTerm prime coefficient power_raised)
 >  | coefficient == 0 = Nothing -- should be impossible tohappen
 >  | power_raised == 0 = Just (show coefficient)
