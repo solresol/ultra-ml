@@ -84,6 +84,7 @@ How many times can I divide the second integer using the first integer?
 
 > data PDivisibility = InfinitelyDivisible | FinitelyDivisible Integer
 > pdivisibility :: Integer -> Integer -> PDivisibility
+> pdivisibility :: Integer -> Integer -> PDivisibility
 > pdivisibility _ 0 = InfinitelyDivisible
 > pdivisibility p n
 >   | n % p == 0 = case (pdivisibility p (n `div` p)) of
