@@ -20,7 +20,7 @@
 >     (intercalate ", " [(show name) ++ "=" ++ (show t) | (name, t) <- zip r et])
 > 
 > extractFeatureAndTarget :: Dataset a b c d -> b -> [(c,d)]
-> extractFeatureAndTarget dataset idx = zip ((extractFeature dataset) idx) ((extractTarget dataset))
+> extractFeatureAndTarget = -- Existing function definition
 >
 > selectListElements :: [a] -> [Bool] -> [a]
 > selectListElements [] [] = []
