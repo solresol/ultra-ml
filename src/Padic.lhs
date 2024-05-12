@@ -29,6 +29,7 @@
 > justs_to_list (Nothing:xs) = justs_to_list xs
 > justs_to_list ((Just x):xs) = x : justs_to_list xs
 > expansion_term_to_blockdisplay :: PadicExpansionTerm -> Maybe BlockElement
+> expansion_term_to_blockdisplay :: PadicExpansionTerm -> Maybe BlockElement
 > expansion_term_to_blockdisplay (PadicExpansionTerm prime coefficient power_raised)
 >  | coefficient == 0 = Nothing -- should be impossible tohappen
 >  | power_raised == 0 = Just (OrdinaryText (show coefficient))
