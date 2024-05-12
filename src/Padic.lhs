@@ -9,6 +9,7 @@
 > data PadicExpansionTerm = PadicExpansionTerm Integer Integer Int deriving (Eq)
 > data PadicExpansion = PadicExpansion [PadicExpansionTerm] deriving (Eq)
 > padic_expansion :: Integer -> Integer -> PadicExpansion
+> padic_expansion :: Integer -> Integer -> PadicExpansion
 > padic_expansion prime n = PadicExpansion (padic_expansion' n 0)
 >  where padic_expansion' n k
 >          | n < prime = [PadicExpansionTerm prime n k]
