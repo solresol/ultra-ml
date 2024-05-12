@@ -38,7 +38,7 @@ c ... the type of a feature
 d ... the type of a target
 
 
-> train_decision_tree :: (Eq b, Eq c) => Dataset a b c d -> (UltrametricCalculator c) -> (UltrametricCalculator d) -> IO (DecisionTreeTraining a b c d)
+> -- Add type signature to train_decision_tree function
 > train_decision_tree training_data featurecalc targetcalc =
 >   return (DecisionTreeTrainingBranch {
 >      in_vs_out_func = splittingfunc,
