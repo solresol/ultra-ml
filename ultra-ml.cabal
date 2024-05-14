@@ -16,10 +16,15 @@ maintainer:          gregb@ifost.org.au
 build-type:          Simple
 extra-source-files:  CHANGELOG.md, README.md
 
+library
+        hs-source-dirs: src
+        exposed-modules: Zorgette, DecisionTree, BlockDisplay, Padic, Polynomial, Datasets, UltrametricCalculator, RegionSlices
+        build-depends: base, sqlite-simple
+        default-language: Haskell2010
+
 executable ultra-ml
-  main-is:             Main.hs
+  main-is:             Main.lhs
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.14 && <4.15
-  -- hs-source-dirs:
+  build-depends:       base, ultra-ml
   default-language:    Haskell2010
